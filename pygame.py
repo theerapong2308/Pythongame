@@ -1,143 +1,140 @@
-import pygame
+import turtle
 import time
 import random
 
-# --- 1. การตั้งค่าเริ่มต้น (Initialization) ---
-pygame.init()
+delay = 0.1
 
-# กำหนดสี (R, G, B)
-WHITE = (255, 255, 255)
-YELLOW = (255, 255, 102)
-BLACK = (0, 0, 0)
-RED = (213, 50, 80)
-GREEN = (0, 255, 0)
-BLUE = (50, 153, 213)
+# --- 1. ตั้งค่าหน้าจอ ---
+wn = turtle.Screen()
+wn.title("เกมงู (เวอร์ชั่นไม่ต้องลงโปรแกรมเพิ่ม)")
+wn.bgcolor("black")
+wn.setup(width=600, height=600)
+wn.tracer(0) # ปิดการอนิเมชั่นเพื่อความลื่นไหล
 
-# ขนาดหน้าจอ
-DIS_WIDTH = 600
-DIS_HEIGHT = 400
+# --- 2. ส่วนหัวของงู ---
+head = turtle.Turtle()
+head.speed(0)
+head.shape("square")
+head.color("green")
+head.penup()
+head.goto(0,0)
+head.direction = "stop"
 
-dis = pygame.display.set_mode((DIS_WIDTH, DIS_HEIGHT))
-pygame.display.set_caption('เกมงู โดย Gemini')
+# --- 3. อาหาร ---
+food = turtle.Turtle()
+food.speed(0)
+food.shape("circle")
+food.color("red")
+food.penup()
+food.goto(0,100)
 
-clock = pygame.time.Clock()
+segments = []
 
-# ขนาดตัวงูและความเร็ว
-SNAKE_BLOCK = 10
-SNAKE_SPEED = 15
+# --- 4. ฟังก์ชันควบคุมทิศทาง ---
+def go_up():
+    if head.direction != "down":
+        head.direction = "up"
 
-# ฟอนต์ข้อความ
-font_style = pygame.font.SysFont("bahnschrift", 25)
-score_font = pygame.font.SysFont("comicsansms", 35)
+def go_down():
+    if head.direction != "up":
+        head.direction = "down"
 
-# --- 2. ฟังก์ชันแสดงผล (Display Functions) ---
-def Your_score(score):
-    value = score_font.render("คะแนน: " + str(score), True, YELLOW)
-    dis.blit(value, [0, 0])
+def go_left():
+    if head.direction != "right":
+        head.direction = "left"
 
-def our_snake(snake_block, snake_list):
-    for x in snake_list:
-        pygame.draw.rect(dis, GREEN, [x[0], x[1], snake_block, snake_block])
+def go_right():
+    if head.direction != "left":
+        head.direction = "right"
 
-def message(msg, color):
-    mesg = font_style.render(msg, True, color)
-    # จัดข้อความให้อยู่กึ่งกลาง
-    text_rect = mesg.get_rect(center=(DIS_WIDTH/2, DIS_HEIGHT/2))
-    dis.blit(mesg, text_rect)
+def move():
+    if head.direction == "up":
+        y = head.ycor()
+        head.sety(y + 20)
 
-# --- 3. ลูปหลักของเกม (Game Loop) ---
-def gameLoop():
-    game_over = False
-    game_close = False
+    if head.direction == "down":
+        y = head.ycor()
+        head.sety(y - 20)
 
-    # ตำแหน่งเริ่มต้น
-    x1 = DIS_WIDTH / 2
-    y1 = DIS_HEIGHT / 2
+    if head.direction == "left":
+        x = head.xcor()
+        head.setx(x - 20)
 
-    x1_change = 0
-    y1_change = 0
+    if head.direction == "right":
+        x = head.xcor()
+        head.setx(x + 20)
 
-    snake_List = []
-    Length_of_snake = 1
+# --- 5. การควบคุมคีย์บอร์ด ---
+wn.listen()
+wn.onkeypress(go_up, "w")
+wn.onkeypress(go_down, "s")
+wn.onkeypress(go_left, "a")
+wn.onkeypress(go_right, "d")
+# ใช้ปุ่มลูกศรด้วย
+wn.onkeypress(go_up, "Up")
+wn.onkeypress(go_down, "Down")
+wn.onkeypress(go_left, "Left")
+wn.onkeypress(go_right, "Right")
 
-    # สุ่มตำแหน่งอาหาร
-    foodx = round(random.randrange(0, DIS_WIDTH - SNAKE_BLOCK) / 10.0) * 10.0
-    foody = round(random.randrange(0, DIS_HEIGHT - SNAKE_BLOCK) / 10.0) * 10.0
+# --- 6. ลูปหลักของเกม ---
+while True:
+    wn.update()
 
-    while not game_over:
+    # ตรวจสอบการชนขอบจอ
+    if head.xcor()>290 or head.xcor()<-290 or head.ycor()>290 or head.ycor()<-290:
+        time.sleep(1)
+        head.goto(0,0)
+        head.direction = "stop"
 
-        while game_close == True:
-            dis.fill(BLACK)
-            message("แพ้แล้ว! กด Q เพื่อออก หรือ C เพื่อเล่นใหม่", RED)
-            Your_score(Length_of_snake - 1)
-            pygame.display.update()
+        # ลบหางทิ้ง
+        for segment in segments:
+            segment.goto(1000, 1000)
+        segments.clear()
+        delay = 0.1
 
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_q:
-                        game_over = True
-                        game_close = False
-                    if event.key == pygame.K_c:
-                        gameLoop()
+    # ตรวจสอบการกินอาหาร
+    if head.distance(food) < 20:
+        # ย้ายอาหารไปที่สุ่ม
+        x = random.randint(-290, 290)
+        y = random.randint(-290, 290)
+        food.goto(x,y)
 
-        # การควบคุมทิศทาง
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                game_over = True
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    x1_change = -SNAKE_BLOCK
-                    y1_change = 0
-                elif event.key == pygame.K_RIGHT:
-                    x1_change = SNAKE_BLOCK
-                    y1_change = 0
-                elif event.key == pygame.K_UP:
-                    y1_change = -SNAKE_BLOCK
-                    x1_change = 0
-                elif event.key == pygame.K_DOWN:
-                    y1_change = SNAKE_BLOCK
-                    x1_change = 0
-
-        # เช็คการชนขอบจอ
-        if x1 >= DIS_WIDTH or x1 < 0 or y1 >= DIS_HEIGHT or y1 < 0:
-            game_close = True
+        # เพิ่มความยาวงู
+        new_segment = turtle.Turtle()
+        new_segment.speed(0)
+        new_segment.shape("square")
+        new_segment.color("lightgreen")
+        new_segment.penup()
+        segments.append(new_segment)
         
-        x1 += x1_change
-        y1 += y1_change
-        dis.fill(BLACK)
-        
-        # วาดอาหาร
-        pygame.draw.rect(dis, RED, [foodx, foody, SNAKE_BLOCK, SNAKE_BLOCK])
-        
-        # อัปเดตตัวงู
-        snake_Head = []
-        snake_Head.append(x1)
-        snake_Head.append(y1)
-        snake_List.append(snake_Head)
-        
-        if len(snake_List) > Length_of_snake:
-            del snake_List[0]
+        # เพิ่มความเร็วเล็กน้อย
+        delay -= 0.001
 
-        # เช็คเงื่อนไขงูกินหางตัวเอง
-        for x in snake_List[:-1]:
-            if x == snake_Head:
-                game_close = True
+    # ย้ายหางตามหัว
+    for index in range(len(segments)-1, 0, -1):
+        x = segments[index-1].xcor()
+        y = segments[index-1].ycor()
+        segments[index].goto(x, y)
 
-        our_snake(SNAKE_BLOCK, snake_List)
-        Your_score(Length_of_snake - 1)
+    if len(segments) > 0:
+        x = head.xcor()
+        y = head.ycor()
+        segments[0].goto(x,y)
 
-        pygame.display.update()
+    move()
 
-        # เช็คเงื่อนไขกินอาหาร
-        if x1 == foodx and y1 == foody:
-            foodx = round(random.randrange(0, DIS_WIDTH - SNAKE_BLOCK) / 10.0) * 10.0
-            foody = round(random.randrange(0, DIS_HEIGHT - SNAKE_BLOCK) / 10.0) * 10.0
-            Length_of_snake += 1
+    # ตรวจสอบการชนตัวเอง
+    for segment in segments:
+        if segment.distance(head) < 20:
+            time.sleep(1)
+            head.goto(0,0)
+            head.direction = "stop"
+            
+            for segment in segments:
+                segment.goto(1000, 1000)
+            segments.clear()
+            delay = 0.1
 
-        clock.tick(SNAKE_SPEED)
+    time.sleep(delay)
 
-    pygame.quit()
-    quit()
-
-# เริ่มเกม
-gameLoop()
+wn.mainloop()
